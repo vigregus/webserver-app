@@ -30,7 +30,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          pip install ruff mypy black pytest pytest-cov pre-commit
+          pip install ruff mypy black pytest pytest-cov pre-commit httpx
 
       - name: Run pre-commit
         run: pre-commit run --all-files
