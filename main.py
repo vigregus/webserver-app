@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 app = FastAPI(
-    title="Test API", description="Тестовое API для демонстрации", version="1.0.0"
+    title="Test API", description="Тестовое API для демонстрации", version="0.1.2"
 )
 
 # Настройка CORS для фронтенда
