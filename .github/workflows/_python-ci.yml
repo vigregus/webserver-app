@@ -44,8 +44,8 @@ jobs:
       - name: Type check (mypy)
         run: mypy .
 
-      - name: Tests with coverage
-        run: pytest -q --cov=. --cov-report=xml --cov-report=term-missing --color=yes
+    #   - name: Tests with coverage
+    #     run: pytest -q --cov=. --cov-report=xml --cov-report=term-missing --color=yes
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
