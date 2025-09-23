@@ -91,6 +91,7 @@ branch = "main"
 version_variables = ["main.py:__version__"]
 upload_to_release = true
 changelog_file = "CHANGELOG.md"
+tag_format = "{version}"
 
 [tool.semantic_release.commit_parser_options]
 minor_tags = ["feat"]
