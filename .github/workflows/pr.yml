@@ -35,7 +35,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/webserver-app-backend
+          images: ghcr.io/${{ github.repository_owner }}/webserver-app-back
           tags: |
             type=sha,format=short
             type=ref,event=pr
