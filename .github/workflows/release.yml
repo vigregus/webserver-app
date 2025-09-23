@@ -39,7 +39,6 @@ jobs:
         uses: python-semantic-release/python-semantic-release@v9
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          repository_token: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Build & Push Docker
