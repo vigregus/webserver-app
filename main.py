@@ -1,8 +1,9 @@
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
+from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 from pydantic import BaseModel
 
 app = FastAPI(
@@ -37,16 +38,24 @@ class UserCreate(BaseModel):
 users_db: list[dict[str, Any]] = []
 user_id_counter: int = 1
 
+# Prometheus metrics
+METRIC_USERS_TOTAL = Gauge("app_users_total", "Total users count in memory store")
+METRIC_REQUESTS_TOTAL = Counter(
+    "app_requests_total", "Total API requests", ["endpoint", "method"]
+)
+
 
 @app.get("/")
 async def root():
     """Корневой эндпоинт"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/", method="GET").inc()
     return {"message": "Добро пожаловать в тестовое API!"}
 
 
 @app.get("/health")
 async def health_check():
     """Проверка здоровья сервиса"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/health", method="GET").inc()
     return {"status": "healthy", "service": "backend-api"}
 
 
@@ -59,12 +68,14 @@ async def get_config():
 @app.get("/api/users", response_model=list[User])
 async def get_users():
     """Получить всех пользователей"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users", method="GET").inc()
     return users_db
 
 
 @app.get("/api/users/{user_id}", response_model=User)
 async def get_user(user_id: int):
     """Получить пользователя по ID"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users/{user_id}", method="GET").inc()
     user = next((u for u in users_db if u["id"] == user_id), None)
     if not user:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -75,6 +86,7 @@ async def get_user(user_id: int):
 async def create_user(user: UserCreate):
     """Создать нового пользователя"""
     global user_id_counter
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users", method="POST").inc()
 
     # Проверка на существующий email
     if any(u["email"] == user.email for u in users_db):
@@ -91,6 +103,7 @@ async def create_user(user: UserCreate):
 
     users_db.append(new_user)
     user_id_counter += 1
+    METRIC_USERS_TOTAL.set(len(users_db))
 
     return new_user
 
@@ -98,6 +111,7 @@ async def create_user(user: UserCreate):
 @app.put("/api/users/{user_id}", response_model=User)
 async def update_user(user_id: int, user: UserCreate):
     """Обновить пользователя"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users/{user_id}", method="PUT").inc()
     user_index = next((i for i, u in enumerate(users_db) if u["id"] == user_id), None)
     if user_index is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
@@ -121,12 +135,21 @@ async def update_user(user_id: int, user: UserCreate):
 @app.delete("/api/users/{user_id}")
 async def delete_user(user_id: int):
     """Удалить пользователя"""
+    METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users/{user_id}", method="DELETE").inc()
     user_index = next((i for i, u in enumerate(users_db) if u["id"] == user_id), None)
     if user_index is None:
         raise HTTPException(status_code=404, detail="Пользователь не найден")
 
     deleted_user = users_db.pop(user_index)
+    METRIC_USERS_TOTAL.set(len(users_db))
     return {"message": f"Пользователь {deleted_user['name']} удален"}
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Эндпоинт Prometheus metrics"""
+    METRIC_USERS_TOTAL.set(len(users_db))
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 @app.get("/api/stats")
