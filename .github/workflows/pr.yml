@@ -13,17 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  ci:
-    uses: ./.github/workflows/_python-ci.yml
-    with:
-      python-version: '3.13'
-
   docker-build:
     name: Docker build (no push)
-    needs: ci
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,8 +30,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/webserver-app-back
           tags: |
             type=sha,format=short
-            type=ref,event=pr
-            type=raw,value=${{ github.ref_name }}
+            type=raw,value={{date 'YYYYMMDD-HHmmss' tz='UTC'}}
 
       - name: Build (no push)
         uses: docker/build-push-action@v6
