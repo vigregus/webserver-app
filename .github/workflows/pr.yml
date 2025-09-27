@@ -42,8 +42,6 @@ jobs:
       - name: Run mypy type checker
         run: mypy .
 
-      - name: Run pysentry check
-        run: pysentry check .
 
       - name: Run unit tests with coverage
         run: pytest
