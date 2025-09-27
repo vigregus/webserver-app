@@ -64,7 +64,7 @@ jobs:
               exit 1
             fi
           else
-            echo "ENV_TAG=${ENV_NAME_LOWER}-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+            echo "ENV_TAG=${ENV_NAME_LOWER}-$(date -u +%Y%m%d%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
           fi
 
       - name: Docker metadata
