@@ -13,6 +13,10 @@ on:
         options:
           - dev
           - stage
+      release_tag:
+        description: 'Release tag for stage deployment (e.g., 0.0.1)'
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -45,7 +49,23 @@ jobs:
           ENV_NAME="${{ inputs.env_name }}"
           if [ -z "$ENV_NAME" ]; then ENV_NAME=dev; fi
           ENV_NAME_LOWER="$(printf '%s' "$ENV_NAME" | tr '[:upper:]' '[:lower:]')"
-          echo "ENV_TAG=${ENV_NAME_LOWER}-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+
+          if [ "$ENV_NAME" = "stage" ]; then
+            if [ -n "${{ inputs.release_tag }}" ]; then
+              # Валидация формата версии (простая проверка на x.y.z)
+              if [[ "${{ inputs.release_tag }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "ENV_TAG=stage-${{ inputs.release_tag }}" >> $GITHUB_OUTPUT
+              else
+                echo "ERROR: Invalid release tag format. Expected format: x.y.z (e.g., 0.0.1)"
+                exit 1
+              fi
+            else
+              echo "ERROR: Release tag is required for stage deployment"
+              exit 1
+            fi
+          else
+            echo "ENV_TAG=${ENV_NAME_LOWER}-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Docker metadata
         id: meta
