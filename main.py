@@ -1,3 +1,5 @@
+import json
+import os
 from typing import Any
 
 import uvicorn
@@ -6,18 +8,37 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Gauge, generate_latest
 from pydantic import BaseModel
 
+
+def load_config():
+    config_path = os.getenv("API_CONFIG_PATH", "/app/config/api-config.json")
+    try:
+        with open(config_path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Fallback конфигурация если ConfigMap не найден
+        return {
+            "apiUrl": "http://localhost:8000",
+            "version": "1.0.0",
+            "environment": "development",
+            "features": {"metrics": True, "cors": True, "rateLimit": False},
+            "limits": {"maxUsers": 100, "maxAge": 100},
+        }
+
+
+app_config = load_config()
+
 app = FastAPI(
     title="Test API", description="Тестовое API для демонстрации", version="0.1.2"
 )
 
-# Настройка CORS для фронтенда
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Разрешаем все origins для Docker
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if app_config["features"]["cors"]:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],  # Разрешаем все origins для Docker
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 # Модели данных
@@ -47,9 +68,8 @@ METRIC_REQUESTS_TOTAL = Counter(
 
 @app.get("/")
 async def root():
-    """Корневой эндпоинт"""
     METRIC_REQUESTS_TOTAL.labels(endpoint="/", method="GET").inc()
-    return {"message": "Добро пожаловать в тестовое API!"}
+    return {"message": "Welcome to the test API!"}
 
 
 @app.get("/health")
@@ -61,20 +81,22 @@ async def health_check():
 
 @app.get("/api/config")
 async def get_config():
-    """Получить конфигурацию для frontend"""
-    return {"apiUrl": "http://localhost:8000", "version": "1.0.0"}
+    return {
+        "apiUrl": app_config["apiUrl"],
+        "version": app_config["version"],
+        "environment": app_config["environment"],
+        "features": app_config["features"],
+    }
 
 
 @app.get("/api/users", response_model=list[User])
 async def get_users():
-    """Получить всех пользователей"""
     METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users", method="GET").inc()
     return users_db
 
 
 @app.get("/api/users/{user_id}", response_model=User)
 async def get_user(user_id: int):
-    """Получить пользователя по ID"""
     METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users/{user_id}", method="GET").inc()
     user = next((u for u in users_db if u["id"] == user_id), None)
     if not user:
@@ -84,7 +106,6 @@ async def get_user(user_id: int):
 
 @app.post("/api/users", response_model=User)
 async def create_user(user: UserCreate):
-    """Создать нового пользователя"""
     global user_id_counter
     METRIC_REQUESTS_TOTAL.labels(endpoint="/api/users", method="POST").inc()
 
